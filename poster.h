@@ -1,19 +1,23 @@
 #ifndef __POSTER_H__
 #define __POSTER_H__
 
+#include <array>
+#include <string>
+
 
 struct rect {
 	double x, y, w, h;
 
 	rect( double x, double y, double w, double h ) : x(x), y(y), w(w), h(h) {}
-	rect( double w, double h ) : x(0), y(0), w(w), h(0) {}
+	rect( double w, double h ) : x(0), y(0), w(w), h(h) {}
+	rect() : x(0), y(0), w(0), h(0) {}
 
 };
 
 
 
 
-array< pair<string, rect> > paper = {
+std::pair<std::string, rect> paper[] = {
 	{"letter", rect(612, 792)},
 	{"tabloid", rect(792, 1224)},
 	{"ledger", rect(1224, 792)},
@@ -24,7 +28,7 @@ array< pair<string, rect> > paper = {
 	{"a1", rect(1685, 2384)},
 	{"a2", rect(1190, 1684)},
 	{"a3", rect(842, 1190)},
-	{"a4", rect(595, 842)},
+	{"a4", rect(596, 842)},
 	{"a5", rect(420, 595)},
 	{"b4", rect(729, 1032)},
 	{"b5", rect(516, 729)},
