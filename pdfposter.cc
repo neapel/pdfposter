@@ -144,34 +144,16 @@ struct poster {
 			cairo_save( cr );
 			cairo_rectangle( cr, m, m, w - 2 * m, h - 2 * m );
 			cairo_clip( cr );
-
 			cairo_translate( cr, bo, bo );
 			cairo_scale( cr, s, s );
-
 			render_document_slice( cr, I->cut );
-			cairo_rectangle( cr, -I->cut.x, -I->cut.y, in_size.w, in_size.h );
 			cairo_restore( cr );
-
-			cairo_save( cr );
-			cairo_set_line_width( cr, 1 );
-			cairo_set_source_rgba( cr, 0, 0, 0, 0.5 );
-			double dashes[] = {1, 2};
-			cairo_set_dash( cr, dashes, 2, 0 );
-			cairo_stroke( cr );
-			cairo_restore( cr );
-
-
-			// Debug
-			cairo_rectangle( cr, m, m, w - 2 * m, h - 2 * m );
-			cairo_rectangle( cr, bo, bo, w - 2 * bo, h - 2 * bo );
-			cairo_set_line_width( cr, 1 );
-			cairo_set_source_rgba( cr, 1, 0, 0, 0.2 );
-			cairo_stroke( cr );
-
 
 			// Outline Marks
-			double bx0 = bo - I->cut.x * s, bx1 = bo + (in_size.w - I->cut.x) * s;
-			double by0 = bo - I->cut.y * s, by1 = bo + (in_size.h - I->cut.y) * s;
+			double bx0 = std::max( bo, std::min( w - bo, bo - I->cut.x * s ) ),
+			       bx1 = std::max( bo, std::min( w - bo, bo + (in_size.w - I->cut.x) * s ) ),
+			       by0 = std::max( bo, std::min( h - bo, bo - I->cut.y * s ) ),
+			       by1 = std::max( bo, std::min( h - bo, bo + (in_size.h - I->cut.y) * s ) );
 			
 
 			if( !I->top && !I->left ) {
@@ -179,7 +161,7 @@ struct poster {
 			} else {
 				cairo_save( cr );
 				cairo_translate( cr, bx0, by0 );
-				outmark( cr, m, b );
+				mark( cr, m, b );
 				cairo_restore( cr );
 			}
 
@@ -187,13 +169,13 @@ struct poster {
 				cairo_save( cr );
 				cairo_scale( cr, -1, 1 );
 				cairo_translate( cr, -w, 0 );
-				cutmark( cr, m, b );
+				mark( cr, m, b );
 				cairo_restore( cr );
 			} else {
 				cairo_save( cr );
 				cairo_scale( cr, -1, 1 );
 				cairo_translate( cr, -bx1, by0 );
-				outmark( cr, m, b );
+				mark( cr, m, b );
 				cairo_restore( cr );
 			}
 
@@ -201,13 +183,13 @@ struct poster {
 				cairo_save( cr );
 				cairo_scale( cr, 1, -1 );
 				cairo_translate( cr, 0, -h );
-				cutmark( cr, m, b );
+				mark( cr, m, b );
 				cairo_restore( cr );
 			} else {
 				cairo_save( cr );
 				cairo_scale( cr, 1, -1 );
 				cairo_translate( cr, bx0, -by1 );
-				outmark( cr, m, b );
+				mark( cr, m, b );
 				cairo_restore( cr );
 			}
 
@@ -215,13 +197,13 @@ struct poster {
 				cairo_save( cr );
 				cairo_scale( cr, -1, -1 );
 				cairo_translate( cr, -w, -h );
-				cutmark( cr, m, b );
+				mark( cr, m, b );
 				cairo_restore( cr );
 			} else {
 				cairo_save( cr );
 				cairo_scale( cr, -1, -1 );
 				cairo_translate( cr, -bx1, -by1 );
-				outmark( cr, m, b );
+				mark( cr, m, b );
 				cairo_restore( cr );
 			}
 
@@ -234,17 +216,11 @@ struct poster {
 		}
 	}
 
-	void cutmark( cairo_t *cr, double margin, double bleed ) {
-		cairo_move_to( cr, 0, margin + bleed );
-		cairo_line_to( cr, margin, margin + bleed );
-		cairo_move_to( cr, margin + bleed, margin );
-		cairo_line_to( cr, margin + bleed, 0 );
-	}
 
-	void outmark( cairo_t *cr, double margin, double bleed ) {
+	void mark( cairo_t *cr, double margin, double bleed ) {
 		cairo_move_to( cr, -margin - bleed, 0 );
-		//cairo_line_to( cr, -bleed, 0 );
-		//cairo_move_to( cr, 0, -bleed );
+		cairo_line_to( cr, -bleed, 0 );
+		cairo_move_to( cr, 0, -bleed );
 		cairo_line_to( cr, 0, 0 );
 		cairo_line_to( cr, 0, -margin - bleed );
 	}
@@ -317,7 +293,7 @@ int main(int argc, char *argv[]) {
 	PDFDoc *doc = new PDFDoc( new GooString(argv[1]), NULL, NULL );
 
 	poster p( doc );
-	p.slice( 595 * 1, 842, 3, 30, 30 );
+	p.slice( 595 * 1, 842, 2, 30, 30 );
 	p.render_with_preview( std::string(argv[2]) );
 
 	return 0;
