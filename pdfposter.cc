@@ -74,7 +74,7 @@ struct poster {
 		// Choose Configuration
 		bool normal = true;
 
-		double epsilon = 0.1;
+		double epsilon = 0.01;
 
 		cerr << "normal: " << (in_w/box_w) << "x" << (in_h/box_h) << endl
 		     << "rotated: " << (in_w/box_h) << "x" << (in_h/box_w) << endl;
@@ -119,8 +119,8 @@ struct poster {
 		}
 
 		// Make tiles
-		int xt = (int)ceil(in_w / box_w);
-		int yt = (int)ceil(in_h / box_h);
+		int xt = (int)ceil(in_w / box_w - epsilon);
+		int yt = (int)ceil(in_h / box_h - epsilon);
 		double xshift = (in_size.w - box_w * xt) / 2;
 		double yshift = (in_size.h - box_h * yt) / 2;
 
