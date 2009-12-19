@@ -12,4 +12,4 @@ option "poster" p "output poster size" details="A paper name like A0 or <size>x<
 option "scale" s "scale factor" details="Scale the original document by the given factor" double optional
 option "guide" g "first page shows the generated tiles" flag off
 option "nomarks" n "don't generate cutmarks" flag off
-option "orient" o "orientation strategy" details="minimize page count or minimize wasted space" values="waste","count" enum default="count"
+option "orient" o "orientation strategy" details="minimize page count or minimize wasted space" values="waste","count","portrait","landscape" enum default="count" optional

@@ -74,10 +74,17 @@ struct poster {
 		// Choose Configuration
 		bool normal = true;
 
-		int normal_pages = ceil(in_w / box_w) * ceil(in_h / box_h);
-		int rotated_pages = ceil(in_w / box_h) * ceil(in_h / box_w);
+		double epsilon = 0.1;
+
+		cerr << "normal: " << (in_w/box_w) << "x" << (in_h/box_h) << endl
+		     << "rotated: " << (in_w/box_h) << "x" << (in_h/box_w) << endl;
+
+		int normal_pages = ceil(in_w / box_w - epsilon) * ceil(in_h / box_h - epsilon);
+		int rotated_pages = ceil(in_w / box_h - epsilon) * ceil(in_h / box_w - epsilon);
 		double normal_waste = (ceil(in_w / box_w) * box_w - in_w) + (ceil(in_h / box_h) * box_h - in_h);
 		double rotated_waste = (ceil(in_w / box_w) * box_w - in_w) + (ceil(in_h / box_h) * box_h - in_h);
+
+		cerr << "normal: "<< normal_waste << endl << "rotated: " << rotated_waste << endl;
 
 		switch( strat ) {
 			// Minimize free space
@@ -92,6 +99,16 @@ struct poster {
 				normal = normal_pages == rotated_pages
 					? normal_waste < rotated_waste
 					: normal_pages < rotated_pages;
+				break;
+
+			// Portrait
+			case orient_arg_portrait:
+				normal = box_w < box_h;
+				break;
+
+			// Landscape
+			case orient_arg_landscape:
+				normal = box_h < box_w;
 				break;
 		}
 
