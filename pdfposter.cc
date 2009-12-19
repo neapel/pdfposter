@@ -119,8 +119,8 @@ struct poster {
 	}
 
 	void render( cairo_t *cr ) {
-		for( auto I = slices.begin() ; I != slices.end() ; I++ ) {
-			cerr << "slice " << I->cut.x << " " << I->cut.y << " " << I->cut.w << " " << I->cut.h << endl;
+		for( auto I = slices.begin(), i = 1 ; I != slices.end() ; I++, i++ ) {
+			cerr << "rendering slice " << i << " of " << slices.size() << '\r' << flush;
 			
 			double w = I->paper_w, h = I->paper_h;
 			double m = I->margin, b = I->bleed;
@@ -128,7 +128,7 @@ struct poster {
 			double bo = m + b;
 			cairo_pdf_surface_set_size( cairo_get_target( cr ), w, h );
 			
-			// Draw Page
+			// Draw Page, clipped
 			cairo_save( cr );
 			cairo_rectangle( cr, m, m, w - 2 * m, h - 2 * m );
 			cairo_clip( cr );
@@ -138,37 +138,44 @@ struct poster {
 			cairo_restore( cr );
 
 			// Cut Marks
-			double bx0 = max( bo, min( w - bo, bo - I->cut.x * s ) ),
-			       bx1 = max( bo, min( w - bo, bo + (in_size.w - I->cut.x) * s ) ),
-			       by0 = max( bo, min( h - bo, bo - I->cut.y * s ) ),
-			       by1 = max( bo, min( h - bo, bo + (in_size.h - I->cut.y) * s ) );
-			
-			cairo_save( cr );
-			cairo_translate( cr, bx0, by0 );
-			mark( cr, b );
-			cairo_restore( cr );
+			if( mark_size > 0 ) {
+				const double bx0 = max( bo, min( w - bo, bo - I->cut.x * s ) ),
+				             bx1 = max( bo, min( w - bo, bo + (in_size.w - I->cut.x) * s ) ),
+				             by0 = max( bo, min( h - bo, bo - I->cut.y * s ) ),
+				             by1 = max( bo, min( h - bo, bo + (in_size.h - I->cut.y) * s ) );
+				
+				// Top left
+				cairo_save( cr );
+				cairo_translate( cr, bx0, by0 );
+				mark( cr, b );
+				cairo_restore( cr );
 
-			cairo_save( cr );
-			cairo_scale( cr, -1, 1 );
-			cairo_translate( cr, -bx1, by0 );
-			mark( cr, b );
-			cairo_restore( cr );
+				// Top right
+				cairo_save( cr );
+				cairo_scale( cr, -1, 1 );
+				cairo_translate( cr, -bx1, by0 );
+				mark( cr, b );
+				cairo_restore( cr );
 
-			cairo_save( cr );
-			cairo_scale( cr, 1, -1 );
-			cairo_translate( cr, bx0, -by1 );
-			mark( cr, b );
-			cairo_restore( cr );
+				// Bottom left
+				cairo_save( cr );
+				cairo_scale( cr, 1, -1 );
+				cairo_translate( cr, bx0, -by1 );
+				mark( cr, b );
+				cairo_restore( cr );
 
-			cairo_save( cr );
-			cairo_scale( cr, -1, -1 );
-			cairo_translate( cr, -bx1, -by1 );
-			mark( cr, b );
-			cairo_restore( cr );
+				// Bottom right
+				cairo_save( cr );
+				cairo_scale( cr, -1, -1 );
+				cairo_translate( cr, -bx1, -by1 );
+				mark( cr, b );
+				cairo_restore( cr );
 
-			cairo_set_source_rgb( cr, 0, 0, 1 );
-			cairo_fill( cr );
+				cairo_set_source_rgb( cr, 0, 0, 0 );
+				cairo_fill( cr );
+			}
 
+			// Next page
 			cairo_show_page( cr );
 		}
 	}
@@ -255,8 +262,6 @@ double parse_length( string s ) {
 	double l;
 	string e;
 	istringstream(s) >> l >> e;
-
-	cerr << s << " => " << l << ", " << e << endl;
 
 	if( e.size() == 0 || e == "pt" ) return l;
 
@@ -351,6 +356,8 @@ int main(int argc, char *argv[]) {
 
 	double scale = min( target.w / my_poster.in_size.w, target.h / my_poster.in_size.h );
 	if( info.scale_given ) scale = info.scale_arg;
+
+	if( info.nomarks_flag ) my_poster.mark_size = 0;
 
 	my_poster.slice( paper.w, paper.h, scale, margin, bleed );
 
