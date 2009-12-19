@@ -64,22 +64,36 @@ struct poster {
 	}
 
 
-	void slice( double out_w, double out_h, double scale = 2, double margin = 30, double bleed = 30 ) {
+	void slice( double out_w, double out_h, double scale, double margin, double bleed, enum_orient strat ) {
 		margin += mark_size;
 		double border = margin + bleed;
 		double box_w = (out_w - 2 * border) / scale, box_h = (out_h - 2 * border) / scale;
 
 		double in_w = in_size.w /*- 2 * border / scale */, in_h = in_size.h /*- 2 * border / scale */;
 
-		// Choose Configuration that wastes less space
+		// Choose Configuration
 		bool normal = true;
+
 		int normal_pages = ceil(in_w / box_w) * ceil(in_h / box_h);
 		int rotated_pages = ceil(in_w / box_h) * ceil(in_h / box_w);
-		if( normal_pages == rotated_pages ) {
-			double normal_waste = (ceil(in_w / box_w) * box_w - in_w) + (ceil(in_h / box_h) * box_h - in_h);
-			double rotated_waste = (ceil(in_w / box_w) * box_w - in_w) + (ceil(in_h / box_h) * box_h - in_h);
-			normal = normal_waste <= rotated_waste;
-		} else normal = normal_pages < rotated_pages;
+		double normal_waste = (ceil(in_w / box_w) * box_w - in_w) + (ceil(in_h / box_h) * box_h - in_h);
+		double rotated_waste = (ceil(in_w / box_w) * box_w - in_w) + (ceil(in_h / box_h) * box_h - in_h);
+
+		switch( strat ) {
+			// Minimize free space
+			case orient_arg_waste:
+				normal = normal_waste == rotated_waste
+					? normal_pages < rotated_pages
+					: normal_waste < rotated_waste;
+				break;
+
+			// Minimize page count
+			case orient_arg_count:
+				normal = normal_pages == rotated_pages
+					? normal_waste < rotated_waste
+					: normal_pages < rotated_pages;
+				break;
+		}
 
 		// Swap
 		if( !normal ) {
@@ -359,7 +373,7 @@ int main(int argc, char *argv[]) {
 
 	if( info.nomarks_flag ) my_poster.mark_size = 0;
 
-	my_poster.slice( paper.w, paper.h, scale, margin, bleed );
+	my_poster.slice( paper.w, paper.h, scale, margin, bleed, info.orient_arg );
 
 	if( info.guide_flag ) my_poster.render_with_preview( output );
 	else my_poster.render( output );
