@@ -1,0 +1,5 @@
+This tool generates multi-page PDF file from the first page of a given PDF file, cutting the original page into multiple smaller pages, which form a bigger poster when glued together.
+
+The arguments try to look familiar to Jos van Eijndhoven's PostScript-poster tool.
+
+Uses poppler, cairo and a little boost, needs GNU gengetopt.
