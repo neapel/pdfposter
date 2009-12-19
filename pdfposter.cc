@@ -1,68 +1,28 @@
-#include <poppler/PDFDoc.h>
-#include <poppler/CairoOutputDev.h>
-
-int main( int argc, char **argv ) {
-	auto doc = new PDFDoc( GooString(argv[1]), NULL, NULL );
-
-	auto out = new CairoOutputDev();
-	out->setCairo (cairo_t *cr);
-
-	out->startDoc( doc->getXRef() );
-
-	doc->displayPageSlice( out, 0, xr, yr, gFalse, gFalse, gFalse, x, y, w, h );
+#include <stdio.h>
+#include <math.h>
+#include <PDFDoc.h>
+#include <splash/SplashBitmap.h>
+#include <SplashOutputDev.h>
+#include <GlobalParams.h>
 
 
+int main(int argc, char *argv[]) {
+
+	globalParams = new GlobalParams();
+
+	GooString *fileName = new GooString(argv[1]);
+	PDFDoc *doc = new PDFDoc(fileName, NULL, NULL);
+
+	SplashColor paperColor = {255, 255, 255};
+	SplashOutputDev *splashOut = new SplashOutputDev( splashModeRGB8, 4, gFalse, paperColor );
+	splashOut->startDoc(doc->getXRef());
+
+	int w = (int) ceil(doc->getPageMediaWidth(1));
+	int h = (int) ceil(doc->getPageMediaHeight(1));
+
+	doc->displayPageSlice(splashOut, 1, 72, 72, 0, gTrue, gFalse, gFalse, 0, 0, w, h );
+	splashOut->getBitmap()->writePNMFile(stdout);
+
+	return 0;
 }
 
-/*
-splashOut = new SplashOutputDev(mono ? splashModeMono1 :
-                                    gray ? splashModeMono8 :
-                                             splashModeRGB8, 4,
-                                  gFalse, paperColor);
-  splashOut->startDoc(doc->getXRef());
-  if (useCropBox) {
-      pg_w = doc->getPageCropWidth(pg);
-      pg_h = doc->getPageCropHeight(pg);
-    } else {
-      pg_w = doc->getPageMediaWidth(pg);
-      pg_h = doc->getPageMediaHeight(pg);
-    }
-savePageSlice(doc, splashOut, pg, x, y, w, h, pg_w, pg_h, ppmFile);
-static void savePageSlice(PDFDoc *doc,
-                   SplashOutputDev *splashOut, 
-                   int pg, int x, int y, int w, int h, 
-                   double pg_w, double pg_h, 
-                   char *ppmFile) {
-  if (w == 0) w = (int)ceil(pg_w);
-  if (h == 0) h = (int)ceil(pg_h);
-  w = (x+w > pg_w ? (int)ceil(pg_w-x) : w);
-  h = (y+h > pg_h ? (int)ceil(pg_h-y) : h);
-  doc->displayPageSlice(splashOut, 
-    pg, x_resolution, y_resolution, 
-    0,
-    !useCropBox, gFalse, gFalse,
-    x, y, w, h
-  );
-
-  SplashBitmap *bitmap = splashOut->getBitmap();
-  
-  if (ppmFile != NULL) {
-    if (png) {
-      bitmap->writeImgFile(splashFormatPng, ppmFile);
-    } else if (jpeg) {
-      bitmap->writeImgFile(splashFormatJpeg, ppmFile);
-    } else {
-      bitmap->writePNMFile(ppmFile);
-    }
-  } else {
-    if (png) {
-      bitmap->writeImgFile(splashFormatPng, stdout);
-    } else if (jpeg) {
-      bitmap->writeImgFile(splashFormatJpeg, stdout);
-    } else {
-      bitmap->writePNMFile(stdout);
-    }
-  }
-}
-
-*/
