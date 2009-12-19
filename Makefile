@@ -5,3 +5,7 @@ CXXFLAGS += `pkg-config --cflags $(packages)` -g3 -I/usr/include/poppler --std=c
 LDLIBS += `pkg-config --libs $(packages)` /usr/local/lib/libpoppler-cairo.a
 
 pdfposter : pdfposter.cc
+
+
+cmdline.c : options.ggo
+	gengetopt -i $< -F $*

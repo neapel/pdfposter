@@ -6,10 +6,10 @@ description "<description>"
 
 args "<options> infile.pdf outfile.pdf"
 
-option cut c "cutmargin" string typestr="length" default="5mm"
-option white w "additional white margin" details="You can also set this to 0 and let the printer scale it down" string typestr="length" default="2cm"
-option media m "media paper size" details="A paper name like A4 or Letter, or <size>x<size>." string default="a4"
-option poster p "output poster size" details="A paper name like A0 or <size>x<size>, you can also use it like 0x50cm, the width will be computed." string
-option scale s "scale factor" details="Scale the original document by the given factor" double
-option guide g "first page shows the generated tiles" flag off
+option "cut" c "cutmargin" string typestr="length" default="5mm"
+option "white" w "additional white margin" details="You can also set this to 0 and let the printer scale it down" string typestr="length" default="2cm"
+option "media" m "media paper size" details="A paper name like A4 or Letter, or <size>x<size>." string default="a4"
+option "poster" p "output poster size" details="A paper name like A0 or <size>x<size>, you can also use it like 0x50cm, the width will be computed." string
+option "scale" s "scale factor" details="Scale the original document by the given factor" double
+option "guide" g "first page shows the generated tiles" flag off
 
