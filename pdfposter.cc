@@ -152,8 +152,6 @@ struct poster {
 			cairo_rectangle( cr, -I->cut.x, -I->cut.y, in_size.w, in_size.h );
 			cairo_restore( cr );
 
-
-			// Outline
 			cairo_save( cr );
 			cairo_set_line_width( cr, 1 );
 			cairo_set_source_rgba( cr, 0, 0, 0, 0.5 );
@@ -162,9 +160,6 @@ struct poster {
 			cairo_stroke( cr );
 			cairo_restore( cr );
 
-			double bx0 = bo - I->cut.x * s, bx1 = bo + (in_size.w - I->cut.x) * s;
-			double by0 = bo - I->cut.y * s, by1 = bo + (in_size.h - I->cut.y) * s;
-			
 
 			// Debug
 			cairo_rectangle( cr, m, m, w - 2 * m, h - 2 * m );
@@ -174,9 +169,10 @@ struct poster {
 			cairo_stroke( cr );
 
 
-			// Cutmarks
-			double x0 = 0, x1 = m, x2 = w - m, x3 = w;
-			double y0 = 0, y1 = m, y2 = h - m, y3 = h;
+			// Outline Marks
+			double bx0 = bo - I->cut.x * s, bx1 = bo + (in_size.w - I->cut.x) * s;
+			double by0 = bo - I->cut.y * s, by1 = bo + (in_size.h - I->cut.y) * s;
+			
 
 			if( !I->top && !I->left ) {
 				cutmark( cr, m, b );
@@ -196,8 +192,8 @@ struct poster {
 			} else {
 				cairo_save( cr );
 				cairo_scale( cr, -1, 1 );
-				cairo_translate( cr, -w, 0 );
-				cutmark( cr, m, b );
+				cairo_translate( cr, -bx1, by0 );
+				outmark( cr, m, b );
 				cairo_restore( cr );
 			}
 
@@ -207,12 +203,25 @@ struct poster {
 				cairo_translate( cr, 0, -h );
 				cutmark( cr, m, b );
 				cairo_restore( cr );
+			} else {
+				cairo_save( cr );
+				cairo_scale( cr, 1, -1 );
+				cairo_translate( cr, bx0, -by1 );
+				outmark( cr, m, b );
+				cairo_restore( cr );
 			}
+
 			if( !I->bottom && !I->right ) {
 				cairo_save( cr );
 				cairo_scale( cr, -1, -1 );
 				cairo_translate( cr, -w, -h );
 				cutmark( cr, m, b );
+				cairo_restore( cr );
+			} else {
+				cairo_save( cr );
+				cairo_scale( cr, -1, -1 );
+				cairo_translate( cr, -bx1, -by1 );
+				outmark( cr, m, b );
 				cairo_restore( cr );
 			}
 
