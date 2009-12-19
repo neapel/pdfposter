@@ -68,15 +68,17 @@ struct poster {
 	std::list<tile> slices;
 	rect in_size, bb;
 	int page;
+	double mark_size;
 
 
-	poster( PDFDoc *pdf ) : pdf(pdf) {
+	poster( PDFDoc *pdf ) : pdf(pdf), mark_size( 15 ) {
 		page = 1;
 		in_size = rect( pdf->getPageMediaWidth(page), pdf->getPageMediaHeight(page) );
 	}
 
 
 	void slice( double out_w, double out_h, double scale = 2, double margin = 30, double bleed = 30 ) {
+		margin += mark_size;
 		double border = margin + bleed;
 		double box_w = (out_w - 2 * border) / scale, box_h = (out_h - 2 * border) / scale;
 
@@ -136,9 +138,8 @@ struct poster {
 			double w = I->paper_w, h = I->paper_h;
 			double m = I->margin, b = I->bleed;
 			double s = I->scale;
-			cairo_pdf_surface_set_size( cairo_get_target( cr ), w, h );
-			
 			double bo = m + b;
+			cairo_pdf_surface_set_size( cairo_get_target( cr ), w, h );
 			
 			// Draw Page
 			cairo_save( cr );
@@ -149,80 +150,58 @@ struct poster {
 			render_document_slice( cr, I->cut );
 			cairo_restore( cr );
 
-			// Outline Marks
+			// Cut Marks
 			double bx0 = std::max( bo, std::min( w - bo, bo - I->cut.x * s ) ),
 			       bx1 = std::max( bo, std::min( w - bo, bo + (in_size.w - I->cut.x) * s ) ),
 			       by0 = std::max( bo, std::min( h - bo, bo - I->cut.y * s ) ),
 			       by1 = std::max( bo, std::min( h - bo, bo + (in_size.h - I->cut.y) * s ) );
 			
+			cairo_save( cr );
+			cairo_translate( cr, bx0, by0 );
+			mark( cr, b );
+			cairo_restore( cr );
 
-			if( !I->top && !I->left ) {
-				cutmark( cr, m, b );
-			} else {
-				cairo_save( cr );
-				cairo_translate( cr, bx0, by0 );
-				mark( cr, m, b );
-				cairo_restore( cr );
-			}
+			cairo_save( cr );
+			cairo_scale( cr, -1, 1 );
+			cairo_translate( cr, -bx1, by0 );
+			mark( cr, b );
+			cairo_restore( cr );
 
-			if( !I->top && !I->right ) {
-				cairo_save( cr );
-				cairo_scale( cr, -1, 1 );
-				cairo_translate( cr, -w, 0 );
-				mark( cr, m, b );
-				cairo_restore( cr );
-			} else {
-				cairo_save( cr );
-				cairo_scale( cr, -1, 1 );
-				cairo_translate( cr, -bx1, by0 );
-				mark( cr, m, b );
-				cairo_restore( cr );
-			}
+			cairo_save( cr );
+			cairo_scale( cr, 1, -1 );
+			cairo_translate( cr, bx0, -by1 );
+			mark( cr, b );
+			cairo_restore( cr );
 
-			if( !I->bottom && !I->left ) {
-				cairo_save( cr );
-				cairo_scale( cr, 1, -1 );
-				cairo_translate( cr, 0, -h );
-				mark( cr, m, b );
-				cairo_restore( cr );
-			} else {
-				cairo_save( cr );
-				cairo_scale( cr, 1, -1 );
-				cairo_translate( cr, bx0, -by1 );
-				mark( cr, m, b );
-				cairo_restore( cr );
-			}
+			cairo_save( cr );
+			cairo_scale( cr, -1, -1 );
+			cairo_translate( cr, -bx1, -by1 );
+			mark( cr, b );
+			cairo_restore( cr );
 
-			if( !I->bottom && !I->right ) {
-				cairo_save( cr );
-				cairo_scale( cr, -1, -1 );
-				cairo_translate( cr, -w, -h );
-				mark( cr, m, b );
-				cairo_restore( cr );
-			} else {
-				cairo_save( cr );
-				cairo_scale( cr, -1, -1 );
-				cairo_translate( cr, -bx1, -by1 );
-				mark( cr, m, b );
-				cairo_restore( cr );
-			}
-
-			cairo_set_line_width( cr, 2 );
-			cairo_set_line_cap( cr, CAIRO_LINE_CAP_BUTT );
 			cairo_set_source_rgb( cr, 0, 0, 1 );
-			cairo_stroke( cr );
+			cairo_fill( cr );
 
 			cairo_show_page( cr );
 		}
 	}
 
 
-	void mark( cairo_t *cr, double margin, double bleed ) {
-		cairo_move_to( cr, -margin - bleed, 0 );
-		cairo_line_to( cr, -bleed, 0 );
-		cairo_move_to( cr, 0, -bleed );
-		cairo_line_to( cr, 0, 0 );
-		cairo_line_to( cr, 0, -margin - bleed );
+	void mark( cairo_t *cr, double b ) {
+		double m = mark_size;
+		double s = m / 5;
+
+		cairo_move_to( cr, -b, 0 );
+		cairo_line_to( cr, -m - b, +s );
+		cairo_line_to( cr, -m - b + s, 0 );
+		cairo_line_to( cr, -m - b, -s );
+		cairo_close_path( cr );
+
+		cairo_move_to( cr, 0, -b );
+		cairo_line_to( cr, +s, -m - b );
+		cairo_line_to( cr, 0, -m - b + s );
+		cairo_line_to( cr, -s, -m - b );
+		cairo_close_path( cr );
 	}
 
 	void render( std::string outname ) {
@@ -293,7 +272,7 @@ int main(int argc, char *argv[]) {
 	PDFDoc *doc = new PDFDoc( new GooString(argv[1]), NULL, NULL );
 
 	poster p( doc );
-	p.slice( 595 * 1, 842, 2, 30, 30 );
+	p.slice( 595 * 1, 842, 3, 70, 30 );
 	p.render_with_preview( std::string(argv[2]) );
 
 	return 0;
