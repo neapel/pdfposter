@@ -304,49 +304,70 @@ double parse_length( string s ) {
 	if( e == "cm" ) return l * (pm * 10);
 	if( e == "m" ) return l * (pm * 1000);
 
-	cerr << "Unknown unit, please use one of pt, in, ft, mm, cm or m" << endl;
+	cerr << "Unknown unit '" << s << "' please use one of pt, in, ft, mm, cm or m" << endl;
 	exit(-4);
+}
+
+rect parse_box( string s ) {
+	size_t mid = s.find_first_of("x*,:; ");
+	if( mid == string::npos ) return rect();
+	return rect(
+		parse_length( s.substr( 0, mid ) ),
+		parse_length( s.substr( mid + 1 ) )
+	);
 }
 
 
 rect find_paper( string n ) {
 
-	vector< pair<string, rect> > sizes = {
-		{"letter", rect(612, 792)},
-		{"tabloid", rect(792, 1224)},
-		{"ledger", rect(1224, 792)},
-		{"legal", rect(612, 1008)},
-		{"statement", rect(396, 612)},
-		{"executive", rect(540, 720)},
-		{"a0", rect(2384, 3371)},
-		{"a1", rect(1685, 2384)},
-		{"a2", rect(1190, 1684)},
-		{"a3", rect(842, 1190)},
-		{"a4", rect(596, 842)},
-		{"a5", rect(420, 595)},
-		{"b4", rect(729, 1032)},
-		{"b5", rect(516, 729)},
-		{"folio", rect(612, 936)},
-		{"quarto", rect(610, 780)},
-		{"10x14", rect(720, 1008)}
+	vector< pair<string, string> > sizes = {
+		// DIN/ISO Sizes
+		{"A40", "1682mmx2378mm"},
+		{"A20", "1189mmx1682mm"}, {"B20", "1414mmx2000mm"},
+		{"A0", "841mmx1189mm"}, {"B0", "1000mmx1414mm"}, {"C0", "917mmx1297mm"}, {"D0", "771mmx1091mm"},
+		{"A1", "594mmx841mm"}, {"B1", "707mmx1000mm"}, {"C1", "648mmx917mm"}, {"D1", "545mmx771mm"},
+		{"A2", "420mmx594mm"}, {"B2", "500mmx707mm"}, {"C2", "458mmx648mm"}, {"D2", "385mmx545mm"},
+		{"A3", "297mmx420mm"}, {"B3", "353mmx500mm"}, {"C3", "324mmx458mm"}, {"D3", "272mmx385mm"},
+		{"A4", "210mmx297mm"}, {"B4", "250mmx353mm"}, {"C4", "229mmx324mm"}, {"D4", "192mmx272mm"},
+		{"A5", "148mmx210mm"}, {"B5", "176mmx250mm"}, {"C5", "162mmx229mm"}, {"D5", "136mmx192mm"},
+		{"A6", "105mmx148mm"}, {"B6", "125mmx176mm"}, {"C6", "114mmx162mm"}, {"D6", "96mmx136mm"},
+		{"A7", "74mmx105mm"}, {"B7", "88mmx125mm"}, {"C7", "81mmx114mm"}, {"D7", "68mmx96mm"},
+		{"A8", "52mmx74mm"}, {"B8", "62mmx88mm"}, {"C8", "57mmx81mm"},
+		{"A9", "37mmx52mm"}, {"B9", "44mmx62mm"}, {"C9", "40mmx57mm"},
+		{"A10", "26mmx37mm"}, {"B10", "31mmx44mm"}, {"C10", "28mmx40mm"},
+		// ANSI Sizes
+		{"Invoice", "140mmx216mm"},
+		{"Executive", "184mmx267mm"},
+		{"Legal", "216mmx356mm"},
+		{"Letter", "216mmx279mm"}, {"A", "216mmx279mm"},
+		{"Ledger","279mmx432mm"}, {"Tabloid","279mmx432mm"}, {"B","279mmx432mm"},
+		{"Broadsheet", "432mmx559mm"}, {"C", "432mmx559mm"},
+		{"D", "559mmx864mm"},
+		{"E", "864mmx1118"},
+		{"F", "711mmx1116"},
+		// Canadian Sizes
+		{"P6", "107mmx140mm"},
+		{"P5", "140mmx215mm"},
+		{"P4", "215mmx280mm"},
+		{"P3", "280mmx430mm"},
+		{"P2", "430mmx560mm"},
+		{"P1", "560mmx860mm"}
 	};
 
 	for( auto I = sizes.begin() ; I != sizes.end() ; I++ )
-		if( boost::iequals( I->first, n ) ) return I->second;
+		if( boost::iequals( I->first, n ) ) return parse_box( I->second );
 
-
-	rect out;
-
-	size_t mid = n.find_first_of("x*,:; ");
-	if( mid == string::npos ) {
-		cerr << "No known paper format, please specify box size as '<length>x<length>'" << endl;
-		exit(-5);
+	rect box = parse_box(n);
+	if( box.w == 0 && box.h == 0 ) {
+		cerr << "No known paper format '" << n << "', please specify box size as '<length>x<length>' or use one of:" << endl;
+		for( auto I = sizes.begin() ; I != sizes.end() ; I++ )
+			cerr << I->first << " ";
+		cerr << endl;
+		exit(-6);
 	}
 
-	out.w = parse_length( n.substr( 0, mid ) );
-	out.h = parse_length( n.substr( mid + 1 ) );
+	return box;
 
-	return out;
 }
 
 
