@@ -8,15 +8,51 @@
 #include <list>
 #include <iostream>
 
-#include "poster.h"
+
+#include <array>
+#include <string>
+
+
+struct rect {
+	double x, y, w, h;
+
+	rect( double x, double y, double w, double h ) : x(x), y(y), w(w), h(h) {}
+	rect( double w, double h ) : x(0), y(0), w(w), h(h) {}
+	rect() : x(0), y(0), w(0), h(0) {}
+
+};
+
+
+std::pair<std::string, rect> paper[] = {
+	{"letter", rect(612, 792)},
+	{"tabloid", rect(792, 1224)},
+	{"ledger", rect(1224, 792)},
+	{"legal", rect(612, 1008)},
+	{"statement", rect(396, 612)},
+	{"executive", rect(540, 720)},
+	{"a0", rect(2384, 3371)},
+	{"a1", rect(1685, 2384)},
+	{"a2", rect(1190, 1684)},
+	{"a3", rect(842, 1190)},
+	{"a4", rect(596, 842)},
+	{"a5", rect(420, 595)},
+	{"b4", rect(729, 1032)},
+	{"b5", rect(516, 729)},
+	{"folio", rect(612, 936)},
+	{"quarto", rect(610, 780)},
+	{"10x14", rect(720, 1008)}
+};
+
 
 
 struct tile : rect {
 	double margin, bleed, paper_w, paper_h, scale;
+	bool top, right, bottom, left;
 	rect cut;
 
-	tile( rect c, double m, double b, double w, double h, double s )
-	 : cut(c), margin(m), bleed(b), paper_w(w), paper_h(h), scale(s) {}
+	tile( rect c, double m, double b, double w, double h, double s, bool bt, bool br, bool bb, bool bl )
+	 : cut(c), margin(m), bleed(b), paper_w(w), paper_h(h), scale(s),
+	   top(bt), right(br), bottom(bb), left(bl) {}
 
 	void preview( cairo_t *cr ) {
 		cairo_rectangle( cr, cut.x, cut.y, cut.w, cut.h );
@@ -44,7 +80,7 @@ struct poster {
 		double border = margin + bleed;
 		double box_w = (out_w - 2 * border) / scale, box_h = (out_h - 2 * border) / scale;
 
-		double in_w = in_size.w - 2 * border, in_h = in_size.h - 2 * border;
+		double in_w = in_size.w - 2 * border / scale, in_h = in_size.h - 2 * border / scale;
 
 		// Choose Configuration that wastes less space
 		bool normal = true;
@@ -65,14 +101,15 @@ struct poster {
 		// Make tiles
 		int xt = (int)ceil(in_w / box_w);
 		int yt = (int)ceil(in_h / box_h);
-		double xshift = (in_w + 2 * border - box_w * xt) / 2;
-		double yshift = (in_h + 2 * border - box_h * yt) / 2;
+		double xshift = (in_size.w - box_w * xt) / 2;
+		double yshift = (in_size.h - box_h * yt) / 2;
 
 		for( int x = 0 ; x < xt ; x++ )
 			for( int y = 0 ; y < yt ; y++ )
 				slices.push_back( tile(
 					rect(xshift + x * box_w, yshift + y * box_h, box_w, box_h),
-					margin, bleed, out_w, out_h
+					margin, bleed, out_w, out_h, scale,
+					y == 0, x == xt - 1, y == yt - 1, x == 0
 				) );
 
 		bb = tile_bounds();
@@ -95,26 +132,112 @@ struct poster {
 	void render( cairo_t *cr ) {
 		for( auto I = slices.begin() ; I != slices.end() ; I++ ) {
 			std::cerr << "slice " << I->cut.x << " " << I->cut.y << " " << I->cut.w << " " << I->cut.h << std::endl;
-			cairo_pdf_surface_set_size( cairo_get_target( cr ), I->paper_w, I->paper_h );
 			
-			double border = I->margin + I->bleed;
+			double w = I->paper_w, h = I->paper_h;
+			double m = I->margin, b = I->bleed;
+			double s = I->scale;
+			cairo_pdf_surface_set_size( cairo_get_target( cr ), w, h );
 			
-			cairo_rectangle( cr, I->margin, I->margin, I->paper_w - 2 * I->margin, I->paper_h - 2 * I->margin );
+			double bo = m + b;
+			
+			// Draw Page
 			cairo_save( cr );
+			cairo_rectangle( cr, m, m, w - 2 * m, h - 2 * m );
 			cairo_clip( cr );
-			cairo_translate( cr, -border, -border );
 
-			cairo_scale( cr, I->scale, I->scale );
-
+			cairo_translate( cr, bo, bo );
+			cairo_scale( cr, s, s );
 
 			render_document_slice( cr, I->cut );
+			cairo_rectangle( cr, -I->cut.x, -I->cut.y, in_size.w, in_size.h );
+			cairo_restore( cr );
 
-			cairo_rectangle( cr, 0, 0, I->cut.w, I->cut.h );
+
+			// Outline
+			cairo_save( cr );
+			cairo_set_line_width( cr, 1 );
+			cairo_set_source_rgba( cr, 0, 0, 0, 0.5 );
+			double dashes[] = {1, 2};
+			cairo_set_dash( cr, dashes, 2, 0 );
+			cairo_stroke( cr );
+			cairo_restore( cr );
+
+			double bx0 = bo - I->cut.x * s, bx1 = bo + (in_size.w - I->cut.x) * s;
+			double by0 = bo - I->cut.y * s, by1 = bo + (in_size.h - I->cut.y) * s;
+			
+
+			// Debug
+			cairo_rectangle( cr, m, m, w - 2 * m, h - 2 * m );
+			cairo_rectangle( cr, bo, bo, w - 2 * bo, h - 2 * bo );
+			cairo_set_line_width( cr, 1 );
+			cairo_set_source_rgba( cr, 1, 0, 0, 0.2 );
 			cairo_stroke( cr );
 
-			cairo_restore( cr );
+
+			// Cutmarks
+			double x0 = 0, x1 = m, x2 = w - m, x3 = w;
+			double y0 = 0, y1 = m, y2 = h - m, y3 = h;
+
+			if( !I->top && !I->left ) {
+				cutmark( cr, m, b );
+			} else {
+				cairo_save( cr );
+				cairo_translate( cr, bx0, by0 );
+				outmark( cr, m, b );
+				cairo_restore( cr );
+			}
+
+			if( !I->top && !I->right ) {
+				cairo_save( cr );
+				cairo_scale( cr, -1, 1 );
+				cairo_translate( cr, -w, 0 );
+				cutmark( cr, m, b );
+				cairo_restore( cr );
+			} else {
+				cairo_save( cr );
+				cairo_scale( cr, -1, 1 );
+				cairo_translate( cr, -w, 0 );
+				cutmark( cr, m, b );
+				cairo_restore( cr );
+			}
+
+			if( !I->bottom && !I->left ) {
+				cairo_save( cr );
+				cairo_scale( cr, 1, -1 );
+				cairo_translate( cr, 0, -h );
+				cutmark( cr, m, b );
+				cairo_restore( cr );
+			}
+			if( !I->bottom && !I->right ) {
+				cairo_save( cr );
+				cairo_scale( cr, -1, -1 );
+				cairo_translate( cr, -w, -h );
+				cutmark( cr, m, b );
+				cairo_restore( cr );
+			}
+
+			cairo_set_line_width( cr, 2 );
+			cairo_set_line_cap( cr, CAIRO_LINE_CAP_BUTT );
+			cairo_set_source_rgb( cr, 0, 0, 1 );
+			cairo_stroke( cr );
+
 			cairo_show_page( cr );
 		}
+	}
+
+	void cutmark( cairo_t *cr, double margin, double bleed ) {
+		cairo_move_to( cr, 0, margin + bleed );
+		cairo_line_to( cr, margin, margin + bleed );
+		cairo_move_to( cr, margin + bleed, margin );
+		cairo_line_to( cr, margin + bleed, 0 );
+	}
+
+	void outmark( cairo_t *cr, double margin, double bleed ) {
+		cairo_move_to( cr, -margin - bleed, 0 );
+		//cairo_line_to( cr, -bleed, 0 );
+		//cairo_move_to( cr, 0, -bleed );
+		cairo_line_to( cr, 0, 0 );
+		cairo_line_to( cr, 0, -margin - bleed );
 	}
 
 	void render( std::string outname ) {
@@ -185,7 +308,7 @@ int main(int argc, char *argv[]) {
 	PDFDoc *doc = new PDFDoc( new GooString(argv[1]), NULL, NULL );
 
 	poster p( doc );
-	p.slice( 595 * 1, 842, 2, 10, 0 );
+	p.slice( 595 * 1, 842, 3, 30, 30 );
 	p.render_with_preview( std::string(argv[2]) );
 
 	return 0;
